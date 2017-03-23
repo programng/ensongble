@@ -1,12 +1,11 @@
 from __future__ import print_function
 
 import os
-os.environ['LIBROSA_CACHE_DIR'] = '/data/tmp/librosa_cache'
-os.environ['LIBROSA_CACHE_LEVEL'] = '50'
+# os.environ['LIBROSA_CACHE_DIR'] = '/data/tmp/librosa_cache'
+# os.environ['LIBROSA_CACHE_LEVEL'] = '50'
 import time
 import math
 import glob
-import cPickle
 from multiprocessing import Pool
 import ipdb
 from functools import partial
@@ -28,12 +27,11 @@ import librosa
 # display module for visualization
 # import librosa.display
 
-print
 ########################
 ### RANDOM FOREST ####
 #######################
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
 
 # path to audio file
@@ -50,7 +48,7 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score
 # play the song
 # IPython.display.Audio(data=y, rate=sr)
 
-# pool = Pool(processes=16)
+pool = Pool(processes=16)
 
 def current_time():
     print("current time: {}".format(str(datetime.now().time())))
@@ -64,6 +62,7 @@ def time_elapsed(start_time):
     print("{} minutes and {} seconds".format(minutes, seconds))
 
 def load_data(genres_list, music_path, sample_number):
+    time_elapsed(start_time)
     """Load audio buffer (data) for all songs for the specified genres
 
     Keyword arguments:
@@ -95,11 +94,13 @@ def load_data(genres_list, music_path, sample_number):
         # pickle_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), pickle_filename)
         if (os.path.isfile(pickle_path)):
             print('loading pickled data...')
+            time_elapsed(start_time)
             audio_buffer_array_for_genre = np.load(pickle_path)
             # f_r = open(pickle_path)
             # audio_buffer_array_for_genre = cPickle.load(f_r)
             # f_r.close()
             print('finished loading pickled data')
+            time_elapsed(start_time)
         else:
             print('loading fresh data...')
             all_songs_for_genre = []
@@ -133,7 +134,7 @@ if __name__ == '__main__':
     genres_list = ['family', 'sci-fi']
     print('genres of interest:')
     for genre in genres_list:
-        print('    ', genre)
+        print('    -', genre)
 
 
     # load dictionary whose keys are genres and values are a list, 0th index is array of songs, 1st index is array of labels
@@ -196,37 +197,47 @@ if __name__ == '__main__':
     df['mfcc5_mean'] = [mfcc5.mean() for mfcc5 in mfcc5s]
     df['mfcc5_std'] = [mfcc5.std() for mfcc5 in mfcc5s]
     print('...finished calculating mfcc5')
+    time_elapsed(start_time)
+
+    # shuffle rows for cross-validation
+    df = df.sample(frac=1)
 
     y = df.pop('genre').values
     X = df.values
-    # ipdb.set_trace()
 
-    # # split into train and test set
+    # np.stack([a,b,c], axis=1)
+
+    # split into train and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
-    # # instantiate model
+    # instantiate model
     rf = RandomForestClassifier()
     print('fitting random forest...')
+    time_elapsed(start_time)
     rf.fit(X_train, y_train)
     print('...finished fitting random forest')
+    time_elapsed(start_time)
 
-    # # get accuracy score
+    # get accuracy score
     print("accuracy score:", rf.score(X_test, y_test))
 
-    # # get y predictions from test set
+    # get y predictions from test set
     y_predict = rf.predict(X_test)
 
-    # # get confusion matrix
+    # get confusion matrix
     print("confusion matrix:")
     print(confusion_matrix(y_test, y_predict))
 
-    # # # get precision
+    # get precision
     # print("precision:", precision_score(y_test, y_predict))
 
-    # # # get recall
+    # get recall
     # print("recall:", recall_score(y_test, y_predict))
 
-
+    print('starting cross validation, k=5...')
+    scores = cross_val_score(rf, X, y, cv=5, n_jobs=-1)
+    print('...finished cross validation')
+    print('cross validation scores:', scores)
 
 
 
@@ -239,7 +250,6 @@ if __name__ == '__main__':
 # Silla's feature vector
 
 # TIMBRAL FEATURES
-
 
 # RHYTHMIC FEATURES
 
