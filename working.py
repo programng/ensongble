@@ -1,13 +1,16 @@
 from __future__ import print_function
 
 import os
-os.environ['LIBROSA_CACHE_DIR'] = '/tmp/librosa_cache'
+os.environ['LIBROSA_CACHE_DIR'] = '/data/tmp/librosa_cache'
 os.environ['LIBROSA_CACHE_LEVEL'] = '50'
 import time
 import math
 import glob
 import cPickle
+from multiprocessing import Pool
 import ipdb
+from functools import partial
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -25,9 +28,9 @@ import librosa
 # display module for visualization
 # import librosa.display
 
-
+print
 ########################
-### RANDOM FOREST ###
+### RANDOM FOREST ####
 #######################
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -47,14 +50,17 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score
 # play the song
 # IPython.display.Audio(data=y, rate=sr)
 
+# pool = Pool(processes=16)
 
-
+def current_time():
+    print("current time: {}".format(str(datetime.now().time())))
 
 
 def time_elapsed(start_time):
     elapsed_time = float(time.time()) - float(start_time)
     minutes = math.floor(elapsed_time / 60)
     seconds = elapsed_time % 60
+    current_time()
     print("{} minutes and {} seconds".format(minutes, seconds))
 
 def load_data(genres_list, music_path, sample_number):
@@ -80,29 +86,40 @@ def load_data(genres_list, music_path, sample_number):
     genres_dict = {}
     # add the data for each genre to the dictionary
     for genre in genres_list:
-        temp_count = 1
-        genres_dict[genre] = {}
-        genre_path = os.path.join(music_path, genre, '*')
+
         print('loading songs for:', genre, '...')
-        audio_buffer_list = []
-        for moviename in glob.glob(genre_path):
-            movie_path = os.path.join(music_path, genre, moviename, '*')
-            print('loading songs for:', moviename, '...')
-            for filename in glob.glob(movie_path):
-                audio_path = os.path.join(music_path, genre, moviename, filename)
-                print('loading song:', filename, '...')
-                audio_buffer, sampling_rate = librosa.load(audio_path, offset=10.0, duration=10.0)
-                # audio_buffer, sampling_rate = librosa.load(audio_path, offset=20.0, duration=1.0)
-                audio_buffer_list.append(audio_buffer)
-                print('... finished loading song:', filename)
-                temp_count += 1
-                if temp_count >= sample_number:
-                    break
-            print('... finished loading songs for:', moviename)
-            if temp_count >= sample_number:
-                break
-        genres_dict[genre] = [np.array(audio_buffer_list)]
-        genres_dict[genre].append(np.array([genre] * len(audio_buffer_list)))
+        # audio_buffer_list = []
+
+        pickle_filename = '{}.npy'.format(genre)
+        pickle_path = os.path.join('/data/music', pickle_filename)
+        # pickle_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), pickle_filename)
+        if (os.path.isfile(pickle_path)):
+            print('loading pickled data...')
+            audio_buffer_array_for_genre = np.load(pickle_path)
+            # f_r = open(pickle_path)
+            # audio_buffer_array_for_genre = cPickle.load(f_r)
+            # f_r.close()
+            print('finished loading pickled data')
+        else:
+            print('loading fresh data...')
+            all_songs_for_genre = []
+            genre_path = os.path.join(music_path, genre, '*')
+
+            for moviename in glob.glob(genre_path):
+                movie_path = os.path.join(music_path, genre, moviename, '*')
+                all_songs_for_movie = glob.glob(movie_path)
+                all_songs_for_genre += all_songs_for_movie
+
+            loaded_audio_for_genre = pool.map(librosa.load, all_songs_for_genre)
+            audio_buffer_array_for_genre = np.array([loaded_audio[0] for loaded_audio in loaded_audio_for_genre])
+            np.save(pickle_path, audio_buffer_array_for_genre)
+            # f_w = open(pickle_path, 'w')
+            # cPickle.dump(audio_buffer_array_for_genre, f_w)
+            # f_w.close()
+            print('finished loading fresh data')
+
+        genres_dict[genre] = [audio_buffer_array_for_genre]
+        genres_dict[genre].append(np.array([genre] * len(audio_buffer_array_for_genre)))
         print('... finished loading songs for:', genre)
 
     return genres_dict
@@ -110,30 +127,20 @@ def load_data(genres_list, music_path, sample_number):
 
 if __name__ == '__main__':
     start_time = time.time()
+    current_time()
 
     # user provided list of genres they want to load
     genres_list = ['family', 'sci-fi']
+    print('genres of interest:')
+    for genre in genres_list:
+        print('    ', genre)
+
 
     # load dictionary whose keys are genres and values are a list, 0th index is array of songs, 1st index is array of labels
     print('loading audio files...')
 
-    pickle_filename = 'data.pkl'
-    pickle_path = os.path.join('/data/music', pickle_filename)
-    # pickle_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), pickle_filename)
-    if (os.path.isfile(pickle_path)):
-        print('loading pickled data...')
-        f_r = open(pickle_path)
-        genres_dict = cPickle.load(f_r)
-        f_r.close()
-        print('finished loading pickled data')
-    else:
-        print('loading fresh data...')
-        genres_dict = load_data(genres_list, '/data/music', 100)
-        time_elapsed(start_time)
-        # f_w = open(pickle_path, 'w')
-        # cPickle.dump(genres_dict, f_w)
-        # f_w.close()
-        print('finished loading fresh data')
+    genres_dict = load_data(genres_list, '/data/music', 100)
+    time_elapsed(start_time)
 
     print('...finished loading audio files')
 
@@ -151,13 +158,18 @@ if __name__ == '__main__':
     df = pd.DataFrame(data={'genre': y})
 
     print('calculating spectral centroids...')
-    spectral_centroids = [librosa.feature.spectral_centroid(x) for x in X]
+    spectral_centroids = pool.map(librosa.feature.spectral_centroid, X)
+    time_elapsed(start_time)
+    # spectral_centroids = [librosa.feature.spectral_centroid(x) for x in X]
     df['spectral_centroids_mean'] = [spectral_centroid.mean() for spectral_centroid in spectral_centroids]
     df['spectral_centroids_std'] = [spectral_centroid.std() for spectral_centroid in spectral_centroids]
     print('...finished calculating spectral centroids')
 
     print('calculating mfccs...')
-    mfccs = [librosa.feature.mfcc(x, n_mfcc=5) for x in X]
+    partial_mfcc = partial(librosa.feature.mfcc, n_mfcc=5)
+    mfccs = pool.map(partial_mfcc, X)
+    time_elapsed(start_time)
+    # mfccs = [librosa.feature.mfcc(x, n_mfcc=5) for x in X]
     print('...finished calculating mfccs')
     print('calculating mfcc1...')
     mfcc1s = [mfcc[0] for mfcc in mfccs]
@@ -202,16 +214,16 @@ if __name__ == '__main__':
     print("accuracy score:", rf.score(X_test, y_test))
 
     # # get y predictions from test set
-    # y_predict = rf.predict(X_test)
+    y_predict = rf.predict(X_test)
 
     # # get confusion matrix
-    # print("confusion matrix:")
-    # print(confusion_matrix(y_test, y_predict))
+    print("confusion matrix:")
+    print(confusion_matrix(y_test, y_predict))
 
-    # # get precision
+    # # # get precision
     # print("precision:", precision_score(y_test, y_predict))
 
-    # # get recall
+    # # # get recall
     # print("recall:", recall_score(y_test, y_predict))
 
 
