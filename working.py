@@ -15,40 +15,11 @@ import numpy as np
 import pandas as pd
 import librosa
 
-
-# import matplotlib.pyplot as plt
-# import matplotlib.style as ms
-# ms.use('seaborn-muted')
-
-# IPython.display for audio output
-# import IPython.display
-
-# librosa for audio
-# display module for visualization
-# import librosa.display
-
-########################
-### RANDOM FOREST ####
-#######################
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score, accuracy_score
 from sklearn.preprocessing import LabelEncoder
-
-# path to audio file
-# audio_path = "/data/music/batch2/Moana (Original Motion Picture Soundtrack|Deluxe Edition)/04 How Far I'll Go.wav"
-# audio_path = "/data/music/batch2/Moana (Original Motion Picture Soundtrack|Deluxe Edition)/04 How Far I'll Go.wav"
-
-# load the song
-# offset-- start reading after this time (in seconds)
-# duration-- load up to this much audio (in seconds)
-# y is audio_buffer
-# sr is sampling_rate
-# y, sr = librosa.load(audio_path, offset=49.0, duration=25.0)
-
-# play the song
-# IPython.display.Audio(data=y, rate=sr)
 
 pool = Pool(processes=16)
 
@@ -89,18 +60,13 @@ def load_data(genres_list, music_path):
     for genre in genres_list:
 
         print('loading songs for:', genre, '...')
-        # audio_buffer_list = []
 
         pickle_filename = '{}.npy'.format(genre)
         pickle_path = os.path.join(music_path, pickle_filename)
-        # pickle_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), pickle_filename)
         if (os.path.isfile(pickle_path)):
             print('loading pickled {} data...'.format(genre))
             time_elapsed(start_time)
             audio_buffer_array_for_genre = np.load(pickle_path)
-            # f_r = open(pickle_path)
-            # audio_buffer_array_for_genre = cPickle.load(f_r)
-            # f_r.close()
             print('finished loading pickled {} data'.format(genre))
             time_elapsed(start_time)
         else:
@@ -118,9 +84,6 @@ def load_data(genres_list, music_path):
             print('pickling {} data...'.format(genre))
             np.save(pickle_path, audio_buffer_array_for_genre)
             print('...finished pickling {} data'.format(genre))
-            # f_w = open(pickle_path, 'w')
-            # cPickle.dump(audio_buffer_array_for_genre, f_w)
-            # f_w.close()
             print('finished loading fresh data')
 
         genres_dict[genre] = [audio_buffer_array_for_genre]
