@@ -19,6 +19,7 @@ def get_movies(start_year, end_year, genre, sort='boxoffice_gross_us,desc', view
         url += "&view={view}".format(view=view)
         url += "&sort={sort}".format(sort=sort)
         url += "&page={page}".format(page=page+1)
+        print 'url:', url
         html = requests.get(url).content
         soup = BeautifulSoup(html, 'html.parser')
         indexes = soup.select('.lister-list .lister-item-index')
@@ -37,8 +38,8 @@ def get_movies(start_year, end_year, genre, sort='boxoffice_gross_us,desc', view
             # print movie_genres
 
             genres = []
-            for genre in movie_genres:
-                genres.append(genre.text)
+            for _genre in movie_genres:
+                genres.append(_genre.text)
 
             genres = '"{}"'.format(','.join(genres))
 
