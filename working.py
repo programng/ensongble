@@ -92,7 +92,7 @@ def load_data(genres_list, music_path):
         # audio_buffer_list = []
 
         pickle_filename = '{}.npy'.format(genre)
-        pickle_path = os.path.join('/data/music', pickle_filename)
+        pickle_path = os.path.join(music_path, pickle_filename)
         # pickle_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), pickle_filename)
         if (os.path.isfile(pickle_path)):
             print('loading pickled {} data...'.format(genre))
@@ -154,6 +154,9 @@ def run_model(Model, X_train, X_test, y_train, y_test):
     # get recall
     print("recall:", recall_score(le_y_test, le_y_predict))
 
+    if name == 'RandomForestClassifier':
+        print('RandomForestClassifier feature importance', clf.feature_importances_)
+
 def cross_validate(Model, X, y, cv=5):
     name = Model.__name__
     print('starting cross validation for {}, k=5...'.format(name))
@@ -169,8 +172,9 @@ if __name__ == '__main__':
 
 
     # user provided list of genres they want to load
-    genres_list = ['family', 'horror']
-    # genres_list = ['family', 'sci-fi', 'horror']
+    genres_list = ['family', 'horror', 'sci-fi']
+    # genres_list = ['family', 'horror']
+    # genres_list = ['family', 'sci-fi']
     print('genres of interest:')
     for genre in genres_list:
         print('    -', genre)
@@ -179,7 +183,7 @@ if __name__ == '__main__':
     # load dictionary whose keys are genres and values are a list, 0th index is array of songs, 1st index is array of labels
     print('loading audio files...')
 
-    genres_dict = load_data(genres_list, '/data/music')
+    genres_dict = load_data(genres_list, '/data/music/pkl')
     time_elapsed(start_time)
 
     print('...finished loading audio files')
@@ -205,8 +209,8 @@ if __name__ == '__main__':
     print('calculating spectral rolloff...')
     time_elapsed(start_time)
     pickle_filename = 'spectral_rolloffs_{}.npy'
-    pickle_path_mean = os.path.join('/data/music', pickle_filename.format('mean'))
-    pickle_path_std = os.path.join('/data/music', pickle_filename.format('std'))
+    pickle_path_mean = os.path.join('/data/music/features_pkl', pickle_filename.format('mean'))
+    pickle_path_std = os.path.join('/data/music/features_pkl', pickle_filename.format('std'))
     if (os.path.isfile(pickle_path_mean) and os.path.isfile(pickle_path_std) ):
         print('loading pickled data...')
         df['spectral_rolloffs_mean'] = np.load(pickle_path_mean)
@@ -225,8 +229,8 @@ if __name__ == '__main__':
     print('calculating spectral centroids...')
     time_elapsed(start_time)
     pickle_filename = 'spectral_centroids_{}.npy'
-    pickle_path_mean = os.path.join('/data/music', pickle_filename.format('mean'))
-    pickle_path_std = os.path.join('/data/music', pickle_filename.format('std'))
+    pickle_path_mean = os.path.join('/data/music/features_pkl', pickle_filename.format('mean'))
+    pickle_path_std = os.path.join('/data/music/features_pkl', pickle_filename.format('std'))
     if (os.path.isfile(pickle_path_mean) and os.path.isfile(pickle_path_std) ):
         print('loading pickled data...')
         df['spectral_centroids_mean'] = np.load(pickle_path_mean)
@@ -245,8 +249,8 @@ if __name__ == '__main__':
     print('calculating zero-crossing rate...')
     time_elapsed(start_time)
     pickle_filename = 'zero_crossing_rates_{}.npy'
-    pickle_path_mean = os.path.join('/data/music', pickle_filename.format('mean'))
-    pickle_path_std = os.path.join('/data/music', pickle_filename.format('std'))
+    pickle_path_mean = os.path.join('/data/music/features_pkl', pickle_filename.format('mean'))
+    pickle_path_std = os.path.join('/data/music/features_pkl', pickle_filename.format('std'))
     if (os.path.isfile(pickle_path_mean) and os.path.isfile(pickle_path_std) ):
         print('loading pickled data...')
         df['zero_crossing_rates_mean'] = np.load(pickle_path_mean)
@@ -266,16 +270,16 @@ if __name__ == '__main__':
     time_elapsed(start_time)
 
     pickle_filename = 'mfccs_{number}_{metric}.npy'
-    pickle_path_mean_1 = os.path.join('/data/music', pickle_filename.format(number=1, metric='mean'))
-    pickle_path_std_1 = os.path.join('/data/music', pickle_filename.format(number=1, metric='std'))
-    pickle_path_mean_2 = os.path.join('/data/music', pickle_filename.format(number=2, metric='mean'))
-    pickle_path_std_2 = os.path.join('/data/music', pickle_filename.format(number=2, metric='std'))
-    pickle_path_mean_3 = os.path.join('/data/music', pickle_filename.format(number=3, metric='mean'))
-    pickle_path_std_3 = os.path.join('/data/music', pickle_filename.format(number=3, metric='std'))
-    pickle_path_mean_4 = os.path.join('/data/music', pickle_filename.format(number=4, metric='mean'))
-    pickle_path_std_4 = os.path.join('/data/music', pickle_filename.format(number=4, metric='std'))
-    pickle_path_mean_5 = os.path.join('/data/music', pickle_filename.format(number=5, metric='mean'))
-    pickle_path_std_5 = os.path.join('/data/music', pickle_filename.format(number=5, metric='std'))
+    pickle_path_mean_1 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=1, metric='mean'))
+    pickle_path_std_1 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=1, metric='std'))
+    pickle_path_mean_2 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=2, metric='mean'))
+    pickle_path_std_2 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=2, metric='std'))
+    pickle_path_mean_3 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=3, metric='mean'))
+    pickle_path_std_3 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=3, metric='std'))
+    pickle_path_mean_4 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=4, metric='mean'))
+    pickle_path_std_4 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=4, metric='std'))
+    pickle_path_mean_5 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=5, metric='mean'))
+    pickle_path_std_5 = os.path.join('/data/music/features_pkl', pickle_filename.format(number=5, metric='std'))
 
     if (os.path.isfile(pickle_path_mean_1) and os.path.isfile(pickle_path_std_1) ):
         print('loading pickled data...')
