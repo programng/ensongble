@@ -10,6 +10,7 @@ from multiprocessing import Pool
 import ipdb
 from functools import partial
 from datetime import datetime
+from hashlib import md5
 
 import numpy as np
 import pandas as pd
@@ -61,30 +62,32 @@ def load_data(genres_list, music_path):
 
         print('loading songs for:', genre, '...')
 
-        pickle_filename = '{}.npy'.format(genre)
-        pickle_path = os.path.join(music_path, pickle_filename)
-        if (os.path.isfile(pickle_path)):
-            print('loading pickled {} data...'.format(genre))
-            time_elapsed(start_time)
-            audio_buffer_array_for_genre = np.load(pickle_path)
-            print('finished loading pickled {} data'.format(genre))
-            time_elapsed(start_time)
-        else:
-            print('loading fresh data...')
-            all_songs_for_genre = []
-            genre_path = os.path.join(music_path, genre, '*')
+        audio_buffer_array_for_genre_list_of_lists = []
+        genre_path = os.path.join(music_path, genre, '*')
+        print('genre_path', genre_path)
+        for moviename in glob.glob(genre_path):
+            movie_path = os.path.join(music_path, genre, moviename, '*')
+            print('moviename', moviename)
+            print('movie_path', movie_path)
 
-            for moviename in glob.glob(genre_path):
-                movie_path = os.path.join(music_path, genre, moviename, '*')
+            hashed_movie_title = md5(moviename).hexdigest()
+
+            pickle_filename = '{}.npy'.format(hashed_movie_title)
+            pickle_path = os.path.join(music_path, 'songs_pkl', pickle_filename)
+            print('pickled pickle_path:', pickle_path)
+            if (os.path.isfile(pickle_path)):
+                audio_buffer_array_for_movie = np.load(pickle_path)
+            else:
                 all_songs_for_movie = glob.glob(movie_path)
-                all_songs_for_genre += all_songs_for_movie
+                loaded_audio_for_movie = pool.imap(librosa.load, all_songs_for_movie)
+                audio_buffer_array_for_movie = np.array([loaded_audio[0] for loaded_audio in loaded_audio_for_movie])
+                print('pickling {} data...'.format(moviename))
+                np.save(pickle_path, audio_buffer_array_for_movie)
+                print('...finished pickling {} data'.format(moviename))
 
-            loaded_audio_for_genre = pool.imap(librosa.load, all_songs_for_genre)
-            audio_buffer_array_for_genre = np.array([loaded_audio[0] for loaded_audio in loaded_audio_for_genre])
-            print('pickling {} data...'.format(genre))
-            np.save(pickle_path, audio_buffer_array_for_genre)
-            print('...finished pickling {} data'.format(genre))
-            print('finished loading fresh data')
+            audio_buffer_array_for_genre_list_of_lists.append(audio_buffer_array_for_movie)
+
+        audio_buffer_array_for_genre = np.concatenate(audio_buffer_array_for_genre_list_of_lists)
 
         genres_dict[genre] = [audio_buffer_array_for_genre]
         genres_dict[genre].append(np.array([genre] * len(audio_buffer_array_for_genre)))
@@ -145,7 +148,7 @@ if __name__ == '__main__':
     # load dictionary whose keys are genres and values are a list, 0th index is array of songs, 1st index is array of labels
     print('loading audio files...')
 
-    genres_dict = load_data(genres_list, '/data/music/pkl')
+    genres_dict = load_data(genres_list, '/data/music')
     time_elapsed(start_time)
 
     print('...finished loading audio files')
