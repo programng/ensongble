@@ -79,7 +79,7 @@ def load_data(genres_list, music_path):
                 all_songs_for_movie = glob.glob(movie_path)
                 all_songs_for_genre += all_songs_for_movie
 
-            loaded_audio_for_genre = pool.map(librosa.load, all_songs_for_genre)
+            loaded_audio_for_genre = pool.imap(librosa.load, all_songs_for_genre)
             audio_buffer_array_for_genre = np.array([loaded_audio[0] for loaded_audio in loaded_audio_for_genre])
             print('pickling {} data...'.format(genre))
             np.save(pickle_path, audio_buffer_array_for_genre)
@@ -133,7 +133,6 @@ if __name__ == '__main__':
     start_time = time.time()
     current_time()
 
-
     # user provided list of genres they want to load
     genres_list = ['family', 'horror', 'sci-fi']
     # genres_list = ['family', 'horror']
@@ -180,7 +179,8 @@ if __name__ == '__main__':
         df['spectral_rolloffs_std'] = np.load(pickle_path_std)
         print('finished loading pickled data')
     else:
-        spectral_rolloffs = pool.map(librosa.feature.spectral_rolloff, X)
+        spectral_rolloffs = pool.imap(librosa.feature.spectral_rolloff, X)
+        spectral_rolloffs = list(spectral_rolloffs)
         df['spectral_rolloffs_mean'] = [spectral_rolloff.mean() for spectral_rolloff in spectral_rolloffs]
         df['spectral_rolloffs_std'] = [spectral_rolloff.std() for spectral_rolloff in spectral_rolloffs]
         np.save(pickle_path_mean, df['spectral_rolloffs_mean'])
@@ -200,7 +200,8 @@ if __name__ == '__main__':
         df['spectral_centroids_std'] = np.load(pickle_path_std)
         print('finished loading pickled data')
     else:
-        spectral_centroids = pool.map(librosa.feature.spectral_centroid, X)
+        spectral_centroids = pool.imap(librosa.feature.spectral_centroid, X)
+        spectral_centroids = list(spectral_centroids)
         df['spectral_centroids_mean'] = [spectral_centroid.mean() for spectral_centroid in spectral_centroids]
         df['spectral_centroids_std'] = [spectral_centroid.std() for spectral_centroid in spectral_centroids]
         np.save(pickle_path_mean, df['spectral_centroids_mean'])
@@ -220,7 +221,8 @@ if __name__ == '__main__':
         df['zero_crossing_rates_std'] = np.load(pickle_path_std)
         print('finished loading pickled data')
     else:
-        zero_crossing_rates = pool.map(librosa.feature.zero_crossing_rate, X)
+        zero_crossing_rates = pool.imap(librosa.feature.zero_crossing_rate, X)
+        zero_crossing_rates = list(zero_crossing_rates)
         df['zero_crossing_rates_mean'] = [zero_crossing_rate.mean() for zero_crossing_rate in zero_crossing_rates]
         df['zero_crossing_rates_std'] = [zero_crossing_rate.std() for zero_crossing_rate in zero_crossing_rates]
         np.save(pickle_path_mean, df['zero_crossing_rates_mean'])
@@ -259,7 +261,8 @@ if __name__ == '__main__':
         print('finished loading pickled data')
     else:
         partial_mfcc = partial(librosa.feature.mfcc, n_mfcc=5)
-        mfccs = pool.map(partial_mfcc, X)
+        mfccs = pool.imap(partial_mfcc, X)
+        mfccs = list(mfccs)
         # mfccs = [librosa.feature.mfcc(x, n_mfcc=5) for x in X]
         print('...finished calculating mfccs')
         print('calculating mfcc1...')
