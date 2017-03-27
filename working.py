@@ -11,6 +11,7 @@ import ipdb
 from functools import partial
 from datetime import datetime
 from hashlib import md5
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -59,38 +60,44 @@ def load_data(genres_list, music_path):
     genres_dict = {}
     # add the data for each genre to the dictionary
     for genre in genres_list:
-
         print('loading songs for:', genre, '...')
 
         audio_buffer_array_for_genre_list_of_lists = []
-        genre_path = os.path.join(music_path, genre, '*')
-        print('genre_path', genre_path)
-        for moviename in glob.glob(genre_path):
-            movie_path = os.path.join(music_path, genre, moviename, '*')
-            print('moviename', moviename)
-            print('movie_path', movie_path)
+        movie_names = []
 
-            hashed_movie_title = md5(moviename).hexdigest()
+        genres_path = os.path.join(music_path, genre, '*')
+        # print('genres_path', genres_path)
+        for movie_path in glob.glob(genres_path):
+            movie_name = movie_path.split('/')[4]
+            print('loading songs for:', movie_name, '...')
+            movies_path = os.path.join(music_path, genre, movie_path, '*')
+            # print('movie_path', movie_path)
+            # print('movies_path', movies_path)
+
+            hashed_movie_title = md5(movie_name).hexdigest()
 
             pickle_filename = '{}.npy'.format(hashed_movie_title)
             pickle_path = os.path.join(music_path, 'songs_pkl', pickle_filename)
-            print('pickled pickle_path:', pickle_path)
+            # print('pickled pickle_path:', pickle_path)
             if (os.path.isfile(pickle_path)):
-                audio_buffer_array_for_movie = np.load(pickle_path)
+                audio_buffer_array_for_movie, movie_names = np.load(pickle_path)
             else:
-                all_songs_for_movie = glob.glob(movie_path)
-                loaded_audio_for_movie = pool.imap(librosa.load, all_songs_for_movie)
+                all_songs_for_movie = glob.glob(movies_path)
+                loaded_audio_for_movie = pool.map(librosa.load, all_songs_for_movie)
                 audio_buffer_array_for_movie = np.array([loaded_audio[0] for loaded_audio in loaded_audio_for_movie])
-                print('pickling {} data...'.format(moviename))
-                np.save(pickle_path, audio_buffer_array_for_movie)
-                print('...finished pickling {} data'.format(moviename))
+                movie_names += [movie_name] * len(all_songs_for_movie)
+                print('pickling {} audio buffer data...'.format(movie_name))
+                np.save(pickle_path, [audio_buffer_array_for_movie, movie_names])
+                print('...finished pickling {} audio buffer data'.format(movie_name))
 
             audio_buffer_array_for_genre_list_of_lists.append(audio_buffer_array_for_movie)
+            print('... finished loading songs for:', movie_name)
 
         audio_buffer_array_for_genre = np.concatenate(audio_buffer_array_for_genre_list_of_lists)
 
         genres_dict[genre] = [audio_buffer_array_for_genre]
         genres_dict[genre].append(np.array([genre] * len(audio_buffer_array_for_genre)))
+        genres_dict[genre].append(movie_names)
         print('... finished loading songs for:', genre)
 
     return genres_dict
@@ -156,20 +163,25 @@ if __name__ == '__main__':
     # get X and y
     Xs = []
     ys = []
+    all_movie_names_list_of_lists = []
     for genre_data in genres_dict.values():
         Xs.append(genre_data[0])
         ys.append(genre_data[1])
+        all_movie_names_list_of_lists.append(genre_data[2])
 
     X = np.concatenate(Xs)
     y = np.concatenate(ys)
+    all_movie_names = np.concatenate(all_movie_names_list_of_lists)
+
     print('X', X)
     print('y', y)
+    print('all_movie_names', all_movie_names)
 
 ###############################
 ##### CALCULATE FEATURES #####
 ###############################
 
-    df = pd.DataFrame(data={'genre': y})
+    df = pd.DataFrame(data={'genre': y, 'movie': all_movie_names})
 
     print('calculating spectral rolloff...')
     time_elapsed(start_time)
@@ -368,7 +380,17 @@ if __name__ == '__main__':
         cross_validate(Model, X, y, cv=5)
 
 
-
+def EnsembleVote(clf, songs):
+    predictions = clf.predict(songs)
+    predictions_counter = Counter(predictions)
+    most_common = predictions_counter.most_common()
+    results = []
+    highest_count = 0
+    for value, count in most_common:
+        if highest_count >= count:
+            highest_count = count
+            results.append(value)
+    return results
 
 
 
@@ -378,10 +400,4 @@ if __name__ == '__main__':
 
 # RHYTHMIC FEATURES
 
-# PITCH FEATURES
-
-
-
-
-
-
+# PITCH FEATU
