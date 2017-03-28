@@ -18,42 +18,6 @@ def load_data():
 def filter_genres(df, genres):
     return df[df['genre'].isin(genres)]
 
-def run_model(Model, X_train, X_test, y_train, y_test):
-    name = Model.__name__
-    print('###########################################')
-    print('fitting {}...'.format(name))
-    clf = Model()
-    clf.fit(X_train, y_train)
-    print('...finished fitting {}'.format(name))
-    y_predict = clf.predict(X_test)
-    print(1, "accuracy score:", clf.score(X_test, y_test))
-
-    print("confusion matrix:")
-    print(confusion_matrix(y_test, y_predict))
-
-    le = LabelEncoder()
-    le.fit(y_train)
-    le_y_test = le.transform(y_test)
-    le_y_predict = le.transform(y_predict)
-
-    print("accuracy score:", accuracy_score(le_y_test, le_y_predict))
-
-    print("precision:", precision_score(le_y_test, le_y_predict, average=None))
-
-    print("recall:", recall_score(le_y_test, le_y_predict, average=None))
-
-    if name == 'RandomForestClassifier':
-        print('RandomForestClassifier feature importance', clf.feature_importances_)
-
-def cross_validate(Model, X, y, cv=5):
-    name = Model.__name__
-    print('starting cross validation for {}, k=5...'.format(name))
-    clf = Model()
-    scores = cross_val_score(clf, X, y, cv=cv, n_jobs=-1)
-    print('...finished cross validation for {}, k=5'.format(name))
-    print('cross validation scores:', scores)
-    print('average of cross validation scores:', scores.mean())
-
 def custom_train_test_split(df, test_proportion=0.1):
     train_movies = []
     test_movies = []
@@ -83,16 +47,6 @@ def ensemble_predict(clf, X, movies):
     predicted_genres_for_each_song = clf.predict(X)
     return get_movie_genre(predicted_genres_for_each_song, movies)
 
-
-    # most_common = predictions_counter.most_common()
-    # results = []
-    # highest_count = 0
-    # for value, count in most_common:
-    #     if highest_count >= count:
-    #         highest_count = count
-    #         results.append(value)
-    # return results
-
 def get_movie_genre(genres, movies):
     predicted_genres_for_movies_dict = defaultdict(list)
     for genre, movie in zip(genres, movies):
@@ -106,34 +60,94 @@ def custom_accuracy_score(ensemble_test, ensemble_predict):
     incorrect = 0
     for test, predict in zip(ensemble_test, ensemble_predict):
         if test[0] == predict[0]:
-            print(test[0], 'actual:', test[1], 'predicted:', predict[1])
+            # print(test[0], 'actual:', test[1], 'predicted:', predict[1])
             if test[1] == predict[1]:
                 correct += 1
             else:
                 incorrect += 1
-    print 1.* correct/(correct+incorrect)
-        # print ensemble_test
-        # print ensemble_predict
+    return 1.* correct/(correct+incorrect)
+
+def custom_cross_validate(df, k=5):
+    train_accuracy_scores = []
+    test_accuracy_scores = []
+
+    movie_partitions = [[]] * k
+    test_proportion = 1./k
+
+    for genre in df['genre'].unique():
+        df_genre = df[df['genre'] == genre]
+        movies = df_genre['movie'].unique()
+        number_of_movies = len(movies)
+        partition_number_of_movies = math.floor(number_of_movies * test_proportion)
+        shuffled_movies = np.random.permutation(movies)
+
+        for partition in range(k):
+            start = partition * partition_number_of_movies
+            end = (partition + 1) * partition_number_of_movies
+            movie_partitions[partition] = movie_partitions[partition] + list(shuffled_movies[start:end])
+
+    for partition in range(k):
+        train_movies_list = movie_partitions[:partition] + movie_partitions[partition+1:]
+        train_movies = [movie for movies in train_movies_list for movie in movies]
+        test_movies = movie_partitions[partition]
+        df_train = df[df['movie'].isin(train_movies)]
+        df_test = df[df['movie'].isin(test_movies)]
+
+        y_train, movies_train, X_train = destructure_df(df_train)
+        y_test, movies_test, X_test = destructure_df(df_test)
+
+        clf = RandomForestClassifier()
+        clf.fit(X_train, y_train)
+
+        ensemble_prediction = ensemble_predict(clf, X_test, movies_test)
+        ensemble_test = get_movie_genre(y_test, movies_test)
+        train_accuracy_scores.append(custom_accuracy_score(ensemble_test, ensemble_prediction))
+
+    return train_accuracy_scores, test_accuracy_scores
 
 
 if __name__ == '__main__':
+    # genres = ['family', 'sci-fi']
+    # genres = ['horror', 'sci-fi']
     genres = ['family', 'horror']
+    # genres = ['family', 'horror', 'sci-fi']
     df = load_data()
     df = filter_genres(df, genres)
 
-    df_train, df_test= custom_train_test_split(df, 0.2)
+    train_accuracy_scores, test_accuracy_scores = custom_cross_validate(df, k=5)
+    print train_accuracy_scores
+    print np.mean(train_accuracy_scores)
 
 
-    y_train, movies_train, X_train = destructure_df(df_train)
-    y_test, movies_test, X_test = destructure_df(df_test)
-
-    clf = RandomForestClassifier()
-    clf.fit(X_train, y_train)
 
 
-    ensemble_predict = ensemble_predict(clf, X_test, movies_test)
-    ensemble_test = get_movie_genre(y_test, movies_test)
-    custom_accuracy_score(ensemble_test, ensemble_predict)
+
+
+    # single split
+
+    # df_train, df_test= custom_train_test_split(df, 0.2)
+
+    # y_train, movies_train, X_train = destructure_df(df_train)
+    # y_test, movies_test, X_test = destructure_df(df_test)
+
+    # clf = RandomForestClassifier()
+    # clf.fit(X_train, y_train)
+
+
+    # ensemble_prediction = ensemble_predict(clf, X_test, movies_test)
+    # ensemble_test = get_movie_genre(y_test, movies_test)
+    # print('accuracy:', custom_accuracy_score(ensemble_test, ensemble_prediction))
+
+
+
+
+
+
+
+
+
+
+
 
 
 
