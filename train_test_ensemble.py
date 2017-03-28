@@ -101,6 +101,10 @@ def custom_cross_validate(df, k=5):
 
         ensemble_prediction = ensemble_predict(clf, X_test, movies_test)
         ensemble_test = get_movie_genre(y_test, movies_test)
+        test_accuracy_scores.append(custom_accuracy_score(ensemble_test, ensemble_prediction))
+
+        ensemble_prediction = ensemble_predict(clf, X_train, movies_train)
+        ensemble_test = get_movie_genre(y_train, movies_train)
         train_accuracy_scores.append(custom_accuracy_score(ensemble_test, ensemble_prediction))
 
     return train_accuracy_scores, test_accuracy_scores
@@ -115,7 +119,8 @@ if __name__ == '__main__':
     df = filter_genres(df, genres)
 
     train_accuracy_scores, test_accuracy_scores = custom_cross_validate(df, k=5)
-    print train_accuracy_scores
+    print 'train_accuracy_scores', train_accuracy_scores
+    print 'test_accuracy_scores', test_accuracy_scores
     print np.mean(train_accuracy_scores)
 
 
