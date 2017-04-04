@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import pandas as pd
 import numpy as np
@@ -8,6 +9,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score, accuracy_score
 from sklearn.preprocessing import LabelEncoder
+from itertools import combinations
 
 def load_data():
     pickle_filename = 'df_music.pkl'
@@ -78,7 +80,7 @@ def custom_cross_validate(df, k=5):
         df_genre = df[df['genre'] == genre]
         movies = df_genre['movie'].unique()
         number_of_movies = len(movies)
-        partition_number_of_movies = math.floor(number_of_movies * test_proportion)
+        partition_number_of_movies = int(math.floor(number_of_movies * test_proportion))
         shuffled_movies = np.random.permutation(movies)
 
         for partition in range(k):
@@ -109,20 +111,25 @@ def custom_cross_validate(df, k=5):
 
     return train_accuracy_scores, test_accuracy_scores
 
+def test_genres(df, genres):
+    df = filter_genres(df, genres)
+    print('############################')
+    print('TESTING FOR GENRES:', genres)
+    train_accuracy_scores, test_accuracy_scores = custom_cross_validate(df, k=5)
+    print('train_accuracy_scores', train_accuracy_scores)
+    print('test_accuracy_scores', test_accuracy_scores)
+    print('mean test_accuracy_score', np.mean(test_accuracy_scores))
 
 if __name__ == '__main__':
-    # genres = ['family', 'sci-fi']
-    # genres = ['horror', 'sci-fi']
-    genres = ['family', 'horror']
-    # genres = ['family', 'horror', 'sci-fi']
+    genres = ['family', 'horror', 'sci-fi']
     df = load_data()
-    df = filter_genres(df, genres)
 
-    train_accuracy_scores, test_accuracy_scores = custom_cross_validate(df, k=5)
-    print 'train_accuracy_scores', train_accuracy_scores
-    print 'test_accuracy_scores', test_accuracy_scores
-    print np.mean(train_accuracy_scores)
+    all_genre_permutations = []
+    for i in xrange(2, len(genres) + 1):
+        all_genre_permutations += list(combinations(genres, i))
 
+    for combination in all_genre_permutations:
+        test_genres(df, combination)
 
 
 

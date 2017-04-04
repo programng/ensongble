@@ -58,7 +58,7 @@ def load_data(genres_list, music_path):
         print('loading songs for:', genre, '...')
 
         audio_buffer_array_for_genre_list_of_lists = []
-        movie_names = []
+        all_movie_names_for_genre = []
 
         genres_path = os.path.join(music_path, genre, '*')
         # print('genres_path', genres_path)
@@ -80,7 +80,13 @@ def load_data(genres_list, music_path):
                 all_songs_for_movie = glob.glob(movies_path)
                 loaded_audio_for_movie = pool.map(librosa.load, all_songs_for_movie)
                 audio_buffer_array_for_movie = np.array([loaded_audio[0] for loaded_audio in loaded_audio_for_movie])
-                movie_names += [movie_name] * len(all_songs_for_movie)
+                print ('movie_name', movie_name)
+                print ('all_songs_for_movie', all_songs_for_movie)
+                print ('len(all_songs_for_movie)', len(all_songs_for_movie))
+                movie_names = [movie_name] * len(all_songs_for_movie)
+                print ('movie_names', movie_names)
+                all_movie_names_for_genre += movie_names
+                print ('all_movie_names_for_genre', movie_names)
                 print('pickling {} audio buffer data...'.format(movie_name))
                 np.save(pickle_path, [audio_buffer_array_for_movie, movie_names])
                 print('...finished pickling {} audio buffer data'.format(movie_name))
@@ -92,7 +98,7 @@ def load_data(genres_list, music_path):
 
         genres_dict[genre] = [audio_buffer_array_for_genre]
         genres_dict[genre].append(np.array([genre] * len(audio_buffer_array_for_genre)))
-        genres_dict[genre].append(movie_names)
+        genres_dict[genre].append(all_movie_names_for_genre)
         print('... finished loading songs for:', genre)
 
     return genres_dict

@@ -24,12 +24,12 @@ if __name__ == '__main__':
     df = df.sample(frac=1)
 
     y = df.pop('genre').values
-    del df['movie']
+    movies = df.pop('movie').values
     X = df.values
     clf = RandomForestClassifier()
     clf.fit(X, y)
 
-    final_model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'final_model.pkl')
+    final_model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pkl', 'final_model.pkl')
 
     joblib.dump(clf, final_model_path)
     # clf = joblib.load(final_model_path)

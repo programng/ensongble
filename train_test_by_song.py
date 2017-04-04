@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import pandas as pd
 import numpy as np
@@ -8,6 +9,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score, accuracy_score
 from sklearn.preprocessing import LabelEncoder
+from itertools import combinations
 
 def load_data():
     pickle_filename = 'df_music.pkl'
@@ -54,14 +56,8 @@ def cross_validate(Model, X, y, cv=5):
     print('cross validation scores:', scores)
     print('average of cross validation scores:', scores.mean())
 
-if __name__ == '__main__':
-    # genres = ['family', 'sci-fi']
-    # genres = ['horror', 'sci-fi']
-    genres = ['family', 'horror']
-    # genres = ['family', 'horror', 'sci-fi']
-    df = load_data()
+def test_genres(df, genres):
     df = filter_genres(df, genres)
-
     # shuffle rows for cross-validation
     df = df.sample(frac=1)
 
@@ -74,12 +70,25 @@ if __name__ == '__main__':
     # split into train and test set
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
-    models = [RandomForestClassifier, GaussianNB]
+    models = [RandomForestClassifier]
+    # models = [RandomForestClassifier, GaussianNB]
 
     for Model in models:
+        print('testing for genres:', genres)
         run_model(Model, X_train, X_test, y_train, y_test)
         cross_validate(Model, X, y, cv=5)
 
+if __name__ == '__main__':
+    genres = ['family', 'horror', 'sci-fi']
+    df = load_data()
+    # test_genres(df, genres)
+
+    all_genre_permutations = []
+    for i in xrange(2, len(genres) + 1):
+        all_genre_permutations += list(combinations(genres, i))
+
+    for combination in all_genre_permutations:
+        test_genres(df, combination)
 
 
 
